@@ -4,9 +4,11 @@ from config import settings
 from audio.effects import *
 
 
+# reverb = Reverb(settings.SAMPLE_RATE)
+reverb = Reverb(settings.REVERB_DELAYS, settings.REVERB_DECAYS, settings.SAMPLE_RATE)
+from config import filter_list
 
 
-reverb = Reverb(settings.SAMPLE_RATE)
 
 def audio_callback(indata, outdata, frames, time, status):
 
@@ -15,28 +17,37 @@ def audio_callback(indata, outdata, frames, time, status):
 
     audio = indata.copy()
 
-    # Gain
-    if settings.GAIN_ENABLE:
-        audio = apply_gain(
-            audio,
-            settings.GAIN_MULTIPLIER
-        )
+    # -------------------------
+    # Time-domain filters
+    # -------------------------
+    for filter_function, domain in filter_list.filters:
+        if domain == "time":
+            audio = filter_function(audio)
 
-    # Bit crusher
-    if settings.BIT_CRUSHER_ENABLE:
-        audio = bit_crush(audio)
 
-    # Distorion
-    if settings.DISTORTION_ENABLE:
-        audio = distortion(audio, settings.DISTORTION_MULTIPLIER)
+    # -------------------------
+    # Frequency-domain filters
+    # -------------------------
+    spectrum = fft(audio)
+    frequencies = get_frequencies(audio)
 
-    # Reverb
-    if settings.REVERB_ENABLE:
-        audio = reverb.process(audio, settings.REVERB_MIX)
 
-    # Noise Clip
-    if settings.NOISE_CLIP_ENABLE:
-        audio = noise_clip( audio, settings.NOISE_CLIP_THRESHOLD )
+    for filter_function, domain in filter_list.filters:
+        if domain == "frequency":
+            spectrum = filter_function(
+                spectrum,
+                frequencies
+            )
+
+
+    # -------------------------
+    # Back to time domain
+    # -------------------------
+    audio = inverse_fft(
+        spectrum,
+        len(audio)
+    )
+
 
     outdata[:] = audio
 

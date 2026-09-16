@@ -1,6 +1,7 @@
 import importlib
-from config import settings
+from config import settings, filter_list
 
+from audio.processor import reverb
 
 def handle_command(command):
 
@@ -204,9 +205,12 @@ def handle_command(command):
         except (ValueError, IndexError):
             print("Usage: NOISE_CLIP_THRESHOLD 0.2")
 
-# elif parts[0] == "reload":
-#     importlib.reload(settings)
-#     print("Settings reloaded.")
+    elif command_name == "reload":
+        importlib.reload(settings)
+        importlib.reload(filter_list)
+        reverb.reinitialise( settings.REVERB_DELAYS, settings.REVERB_DECAYS, settings.SAMPLE_RATE )
+        # from config.filter_list import filters
+        print("Settings reloaded.")
 
 
     else:
